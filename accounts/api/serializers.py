@@ -2,10 +2,14 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 
 
-class WriteOnlyUserSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'password', 'is_active']
+        fields = ['id', 'username', 'first_name', 'last_name', 'password', 'is_active', ]
+        read_only_fields = ('last_login', 'is_superuser',)
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
 
     def save(self, **kwargs):
         user = User(
@@ -19,22 +23,11 @@ class WriteOnlyUserSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        if validated_data.get('username'):
-            instance.username = validated_data.get('username')
-        if validated_data.get('first_name'):
-            instance.first_name = validated_data.get('first_name')
-        if validated_data.get('last_name'):
-            instance.last_name = validated_data.get('last_name')
-        if validated_data.get('is_active'):
-            instance.is_active = validated_data.get('is_active')
-        if validated_data.get('password'):
-            instance.set_password(validated_data.get('password'))
+        for field in validated_data:
+            if field == 'password':
+                instance.set_password(validated_data.get(field))
+            else:
+                setattr(instance, field, validated_data.get(field))
 
         instance.save()
         return instance
-
-
-class ReadOnlyUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'is_active', 'is_superuser']
